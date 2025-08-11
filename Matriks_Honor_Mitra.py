@@ -1,49 +1,52 @@
 import streamlit as st
 import pandas as pd
-import json
 import os
 
-# ---------------- Helper untuk load & save JSON ----------------
-def load_data(file_path):
+# ---------- Fungsi untuk load dan simpan ----------
+def load_data(file_path, default_data):
     if os.path.exists(file_path):
-        with open(file_path, "r") as f:
-            return pd.DataFrame(json.load(f))
+        return pd.read_csv(file_path)
     else:
-        return pd.DataFrame(columns=["Nama Mitra", "Kategori", "Sub Kategori", "Honor"])
+        df = pd.DataFrame(default_data)
+        df.to_csv(file_path, index=False)
+        return df
 
 def save_data(file_path, df):
-    with open(file_path, "w") as f:
-        json.dump(df.to_dict(orient="records"), f, indent=4)
+    df.to_csv(file_path, index=False)
 
-# ---------------- Path file JSON ----------------
-pml_ppl_file = "data_pml_ppl.json"
-pengolahan_file = "data_pengolahan.json"
-
-# ---------------- Inisialisasi session_state ----------------
+# ---------- Inisialisasi ----------
 if "page" not in st.session_state:
     st.session_state.page = "home"
 
+def go_to(page):
+    st.session_state.page = page
+    st.rerun()
+
+# File penyimpanan
+file_pml_ppl = "data_pml_ppl.csv"
+file_pengolahan = "data_pengolahan.csv"
+
+# Data awal
+default_pml_ppl = {
+    "Nama Mitra": ["Andi", "Budi", "Citra"],
+    "Kategori": ["Lapangan", "Lapangan", "Lapangan"],
+    "Sub Kategori": ["PML", "PPL", "PML"],
+    "Honor": [1500000, 1200000, 1400000]
+}
+
+default_pengolahan = {
+    "Nama Mitra": ["Dewi", "Eka", "Fajar"],
+    "Kategori": ["Pengolahan", "Pengolahan", "Pengolahan"],
+    "Sub Kategori": ["Entri Data", "QC Data", "Entri Data"],
+    "Honor": [1300000, 1600000, 1250000]
+}
+
+# Load data dari CSV
 if "data_pml_ppl" not in st.session_state:
-    st.session_state.data_pml_ppl = load_data(pml_ppl_file)
-    if st.session_state.data_pml_ppl.empty:  # Data default jika JSON kosong
-        st.session_state.data_pml_ppl = pd.DataFrame({
-            "Nama Mitra": ["Andi", "Budi", "Citra"],
-            "Kategori": ["Lapangan", "Lapangan", "Lapangan"],
-            "Sub Kategori": ["PML", "PPL", "PML"],
-            "Honor": [1500000, 1200000, 1400000]
-        })
-        save_data(pml_ppl_file, st.session_state.data_pml_ppl)
+    st.session_state.data_pml_ppl = load_data(file_pml_ppl, default_pml_ppl)
 
 if "data_pengolahan" not in st.session_state:
-    st.session_state.data_pengolahan = load_data(pengolahan_file)
-    if st.session_state.data_pengolahan.empty:
-        st.session_state.data_pengolahan = pd.DataFrame({
-            "Nama Mitra": ["Dewi", "Eka", "Fajar"],
-            "Kategori": ["Pengolahan", "Pengolahan", "Pengolahan"],
-            "Sub Kategori": ["Entri Data", "QC Data", "Entri Data"],
-            "Honor": [1300000, 1600000, 1250000]
-        })
-        save_data(pengolahan_file, st.session_state.data_pengolahan)
+    st.session_state.data_pengolahan = load_data(file_pengolahan, default_pengolahan)
 
 kategori_dict = {
     "A. PUBLIKASI/LAPORAN STATISTIK NERACA PENGELUARAN": [
@@ -58,10 +61,6 @@ kategori_dict = {
         "Honor petugas pengolahan survei SKPS",
     ],
 }
-
-def go_to(page):
-    st.session_state.page = page
-    st.rerun()
 
 # ---------------- Halaman Home ----------------
 if st.session_state.page == "home":
@@ -81,10 +80,9 @@ elif st.session_state.page == "pml_ppl":
     pilihan_nama = st.selectbox("Pilih Mitra", st.session_state.data_pml_ppl["Nama Mitra"].unique())
 
     if pilihan_nama:
-        detail = st.session_state.data_pml_ppl[
-            st.session_state.data_pml_ppl["Nama Mitra"] == pilihan_nama
-        ][["Kategori", "Sub Kategori", "Honor"]]
+        detail = st.session_state.data_pml_ppl[st.session_state.data_pml_ppl["Nama Mitra"] == pilihan_nama][["Kategori", "Sub Kategori", "Honor"]]
         st.table(detail)
+
         total_honor = detail["Honor"].sum()
         st.write(f"**Total Honor :** Rp {total_honor:,.0f}")
 
@@ -99,10 +97,9 @@ elif st.session_state.page == "pengolahan":
     pilihan_nama = st.selectbox("Pilih Mitra", st.session_state.data_pengolahan["Nama Mitra"].unique())
 
     if pilihan_nama:
-        detail = st.session_state.data_pengolahan[
-            st.session_state.data_pengolahan["Nama Mitra"] == pilihan_nama
-        ][["Kategori", "Sub Kategori", "Honor"]]
+        detail = st.session_state.data_pengolahan[st.session_state.data_pengolahan["Nama Mitra"] == pilihan_nama][["Kategori", "Sub Kategori", "Honor"]]
         st.table(detail)
+
         total_honor = detail["Honor"].sum()
         st.write(f"**Total Honor :** Rp {total_honor:,.0f}")
 
@@ -114,19 +111,20 @@ elif st.session_state.page == "pengolahan":
 # ---------------- Halaman Catat Honor Mitra PPL & PML ----------------
 elif st.session_state.page == "3.1":
     st.title("Catat Honor Mitra PPL & PML")
+    st.subheader("Tambah Mitra Baru")
 
     nama_baru = st.text_input("Nama Mitra")
     kategori_baru = st.selectbox("Pilih Kategori", list(kategori_dict.keys()))
     sub_kategori_baru = st.selectbox("Pilih Sub Kategori", kategori_dict[kategori_baru])
     honor_baru = st.number_input("Masukkan Honor", min_value=0)
 
-    if st.button("Catat Honor"):
+    if st.button("Catat  Honor"):
         st.session_state.data_pml_ppl.loc[len(st.session_state.data_pml_ppl)] = [
             nama_baru, kategori_baru, sub_kategori_baru, honor_baru
         ]
-        save_data(pml_ppl_file, st.session_state.data_pml_ppl)
+        save_data(file_pml_ppl, st.session_state.data_pml_ppl)
         st.success(f"Honor {nama_baru} berhasil dicatat!")
-
+    
     if st.button("Cek Riwayat Honor", use_container_width=True):
         go_to("pml_ppl")
     elif st.button("Home", use_container_width=True):
@@ -135,19 +133,20 @@ elif st.session_state.page == "3.1":
 # ---------------- Halaman Catat Honor Petugas Pengolahan ----------------
 elif st.session_state.page == "3.2":
     st.title("Catat Honor Petugas Pengolahan")
+    st.subheader("Tambah Mitra Baru")
 
     nama_baru = st.text_input("Nama Mitra")
     kategori_baru = st.selectbox("Pilih Kategori", list(kategori_dict.keys()))
     sub_kategori_baru = st.selectbox("Pilih Sub Kategori", kategori_dict[kategori_baru])
     honor_baru = st.number_input("Masukkan Honor", min_value=0)
 
-    if st.button("Catat Honor"):
+    if st.button("Catat  Honor"):
         st.session_state.data_pengolahan.loc[len(st.session_state.data_pengolahan)] = [
             nama_baru, kategori_baru, sub_kategori_baru, honor_baru
         ]
-        save_data(pengolahan_file, st.session_state.data_pengolahan)
+        save_data(file_pengolahan, st.session_state.data_pengolahan)
         st.success(f"Honor {nama_baru} berhasil dicatat!")
-
+    
     if st.button("Cek Riwayat Honor", use_container_width=True):
         go_to("pengolahan")
     elif st.button("Home", use_container_width=True):
