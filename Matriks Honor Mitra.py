@@ -1,6 +1,29 @@
 import streamlit as st
 import pandas as pd
 import os
+import base64
+
+# Fungsi untuk mengambil file gambar & ubah jadi base64
+def get_base64(file_path):
+    with open(file_path, "rb") as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
+# Ambil gambar dan set ke CSS
+img_base64 = get_base64("images/background.png")
+st.markdown(
+    f"""
+    <style>
+    .stApp {{
+        background-image: url("data:image/png;base64,{img_base64}");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }}
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # ---------- Fungsi untuk load dan simpan ----------
 def load_data(file_path, default_data):
@@ -2230,3 +2253,4 @@ elif st.session_state.page == "3.2_des":
         go_to("pengolahan_des")
     elif st.button("Home", use_container_width=True):
         go_to("bulan")
+
